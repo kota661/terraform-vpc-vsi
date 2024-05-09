@@ -1,71 +1,58 @@
-# image
-data "ibm_is_image" "this" {
-  name = var.vsi_image_name
-}
-
-# Resource Group
-data "ibm_resource_group" "primary" {
+/******************************************
+ Resource Group
+ *****************************************/
+data "ibm_resource_group" "this" {
   name = var.resource_group_name
 }
 
-# VPC
-data "ibm_is_vpc" "primary" {
-  name = var.vpc_name
+
+/******************************************
+ Project
+ *****************************************/
+resource "ibm_code_engine_project" "this" {
+  name              = var.ce_project_name
+  resource_group_id = data.ibm_resource_group.this.id
 }
 
-# ssh-key
-data "ibm_is_ssh_key" "keys" {
-  count = length(var.ssh_key_names)
-  name  = var.ssh_key_names[count.index]
-}
+// data "ibm_code_engine_project" "code_engine_project" {
+//     id = "15314cc3-85b4-4338-903f-c28cdee6d005"
+// }
 
-# fip
-resource "ibm_is_floating_ip" "this" {
-  count          = var.floating_ip ? 1 : 0
-  name           = "${var.instance_name}-fip"
-  zone           = var.zone
-  resource_group = data.ibm_resource_group.primary.id
-  tags           = var.tags
-}
 
-resource "ibm_is_virtual_network_interface_floating_ip" "this" {
-  count                     = var.floating_ip ? 1 : 0
-  virtual_network_interface = ibm_is_virtual_network_interface.this.id
-  floating_ip               = ibm_is_floating_ip.this[0].id
-}
-
-# vni
-resource "ibm_is_virtual_network_interface" "this" {
-  name                      = format("%s-vni", var.instance_name)
-  allow_ip_spoofing         = false
-  enable_infrastructure_nat = true
-  subnet                    = var.subnet_id
-  security_groups           = values(var.security_groups)
-}
-
-# vsi
-resource "ibm_is_instance" "this" {
-  name    = var.instance_name
-  image   = data.ibm_is_image.this.id
-  profile = var.profile
-
-  primary_network_attachment {
-    name = format("%s-primary-att", var.instance_name)
-    virtual_network_interface {
-      id = ibm_is_virtual_network_interface.this.id
-    }
-  }
-
-  vpc  = data.ibm_is_vpc.primary.id
-  zone = var.zone
-  keys = data.ibm_is_ssh_key.keys.*.id
-
-  timeouts {
-    create = "15m"
-    update = "15m"
-    delete = "15m"
-  }
-
-  resource_group = data.ibm_resource_group.primary.id
-  tags           = var.tags
+/******************************************
+ App
+ *****************************************/
+resource "ibm_code_engine_app" "this" {
+  image_port      = 8080
+  image_reference = "icr.io/codeengine/helloworld"
+  # image_secret = "my-secret"
+  managed_domain_mappings = "local_public" # (local_public, local_private, local)
+  name                    = "my-app"
+  project_id              = ibm_code_engine_project.this.id
+  # project_id = ibm_code_engine_project.this.id
+  # # run_as_user = 1001
+  # run_env_variables {
+  #   key = "MY_VARIABLE"
+  #   name = "SOME"
+  #   prefix = "PREFIX_"
+  #   reference = "my-secret"
+  #   type = "literal"
+  #   value = "VALUE"
+  # }
+  # run_service_account = "default"
+  # run_volume_mounts {
+  #   mount_path = "/app"
+  #   name = "codeengine-mount-b69u90"
+  #   reference = "my-secret"
+  #   type = "secret"
+  # }
+  # scale_concurrency = 100
+  # scale_concurrency_target = 80
+  # scale_cpu_limit = "1"
+  # scale_ephemeral_storage_limit = "4G"
+  # scale_initial_instances = 1
+  # scale_max_instances = 10
+  # scale_memory_limit = "4G"
+  # scale_min_instances = 1
+  # scale_request_timeout = 300
 }
