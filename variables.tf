@@ -62,7 +62,7 @@ variable "profile" {
  *****************************************/
 variable "ssh_key_names" {
   description = "登録済みのssh keyの名前"
-
+  type        = list(string)
 }
 
 /******************************************
