@@ -37,7 +37,7 @@ variable "subnet_id" {
 variable "floating_ip" {
   description = "floating_ipの割当を行うか。: true, false"
   type        = bool
-  default     = true
+  default     = false
 }
 
 /******************************************
